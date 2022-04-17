@@ -1,10 +1,12 @@
-# rabbitmq
+package rabbitmq
 
-Usage see:
+import (
+	"context"
+	"fmt"
+)
 
-/rabbitmq_test.go
+type ConsumeFunc func(ctx context.Context, data []byte) (requeue bool)
 
-```
 type RabbitMQ interface {
 	// dial rabbit and init queue with exchange and queuebind.
 	Dial() error
@@ -18,4 +20,16 @@ type RabbitMQ interface {
 	// return the subscribe operation occured error or ack & nack error.
 	ConsumeDone() <-chan error
 }
-```
+
+func NewRabbitMQ(username, password, ip string, port uint, vhost string, opts ...Option) RabbitMQ {
+	c := &rabbitmq{
+		link:          fmt.Sprintf(`amqp://%s:%s@%s:%d/%s`, username, password, ip, port, vhost),
+		queueConfigs:  make([]queueConfig, 0),
+		consumeDoneCh: make(chan error, 1),
+	}
+
+	for _, opt := range opts {
+		opt.apply(c)
+	}
+	return c
+}
